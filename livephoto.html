@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Live Photo</title>
+    <style>
+        *{margin: 0;overflow: hidden}
+    </style>
+
+    <script src="https://cdn.apple-livephotoskit.com/lpk/1/livephotoskit.js"></script>
+</head>
+<body>
+    <!--<div data-live-photo id="video"-->
+        <!--data-photo-src="images/IMG_3603.JPG"-->
+        <!--data-video-src="images/IMG_3603.MOV"-->
+        <!--style="width: 320px; height: 320px; display: none;">-->
+    <!--</div>-->
+    <video  id="video" autoplay style="display: none">
+        <source src="images/IMG_3603.MOV">
+    </video>
+    <!--<canvas id="img"></canvas>-->
+    <canvas id="canvas"></canvas>
+    <!--<div id="my-live-photo-target-element" style="width: 320px; height: 320px;"></div>-->
+    <script src="three.r84.js"></script>
+    <script src="firstPersonControl.js"></script>
+    <script src="Photo.js"></script>
+
+    <script>
+        let video, texture, camera, scene, renderer, canvas = document.getElementById('canvas'),
+                parameters, geometry, material, mesh, control;
+        let width = window.innerWidth, height = window.innerHeight;
+        let clock = new THREE.Clock(); //第一人称控制需要
+
+        let counter = 0;
+
+
+        let container = new THREE.Mesh(new THREE.Geometry(), new THREE.MeshLambertMaterial({transparent:true,opacity:0}))
+        init();
+//        const player = LivePhotosKit.Player(document.getElementById('my-live-photo-target-element'));
+//        player.photoSrc = 'images/IMG_3603.JPG';
+//        player.videoSrc = 'images/IMG_3603.MOV';
+//        player.addEventListener('photoload', function(evt){
+//            console.log('player ready', evt)
+//            init()
+//        });
+
+        function init() {
+            canvas.width = width;
+            canvas.height = height;
+
+            scene = new THREE.Scene();
+
+            camera = new THREE.PerspectiveCamera( 40, width / width, 1, 10000 );
+            camera.position.z = 0;
+            camera.position.y = 0;
+            camera.lookAt(new THREE.Vector3(0,-1000,-1000))
+
+            var light = new THREE.DirectionalLight( 0xffffff );
+            light.position.set( 0.5, 1, 1 ).normalize();
+//            scene.add( light );
+            light = new THREE.AmbientLight( 0xffffff ); // soft white light
+            scene.add( light );
+
+            renderer = new THREE.WebGLRenderer( { canvas: canvas } );
+            renderer.setClearColor(0x000000)
+
+            video = document.getElementById('video');
+
+            texture = new THREE.VideoTexture(video);
+            texture.minFilter = THREE.LinearFilter;
+            texture.magFilter = THREE.LinearFilter;
+//            texture.format = THREE.RGBFormat;
+            console.log(texture)
+
+//            video.play();
+            var texture2 = new THREE.TextureLoader().load( "images/IMG_3603.JPG" );
+//            texture2.wrapS = 512;
+//            texture2.wrapT = 512;
+            texture2.minFilter = THREE.LinearFilter;
+            texture2.magFilter = THREE.LinearFilter;
+            console.log(texture2)
+//            texture2.repeat.set(.8, .8);
+
+            parameters = { color: 0xffffff, map: texture2};
+            geometry = new THREE.BoxGeometry( 500, 200, 100 );new THREE.BoxGeometry()
+            material = new THREE.MeshLambertMaterial( parameters );
+//            material.saturation = 0 ;
+            mesh = new THREE.Mesh( geometry, material );
+//            material.map = texture
+
+            video.addEventListener('ended', function () {
+                material.map = texture2
+            })
+            container.add(mesh)
+
+//            scene.add(container);
+            cont = new THREE.Photo({
+                photoURL : 'images/IMG_3603.JPG',
+                videoURL : 'images/IMG_3603.MOV',
+                width:400 , height:300, depth:50, xGrid:10, yGrid:10
+            })
+            cont.position.z = -1000;
+            cont.position.y = -1000;
+            cont.lookAt(camera.position)
+            scene.add(cont)
+
+            control = new THREE.FirstPersonControls(camera, canvas);
+            control.movementSpeed = 100;
+            control.lookSpeed = 0.05;
+            control.lookVertical = true;
+//            control.lon = Math.PI/2;
+//            control.lat = Math.PI/2;
+            control.target = cont.position
+
+            renderer.render(scene,camera)
+
+            window.requestAnimationFrame(loop);
+        }
+
+        function loop() {
+            var time = new Date();
+//            camera.lookAt(cont.position)
+//            control.update(clock.getDelta());
+            console.log(camera.position)
+            if(counter++ > 100){
+                material.map = texture
+                video.play()
+                counter = 0
+            }
+            if(!cont.hadInEnded){
+                cont.show()
+            }
+            if(!cont.counter){
+                cont.play()
+            }
+            if(cont.hadInEnded){
+                cont.hide()
+            }
+
+            renderer.render(scene,camera)
+            window.requestAnimationFrame(loop);
+        }
+
+    </script>
+</body>
+</html>
