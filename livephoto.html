@@ -16,23 +16,24 @@
         <!--style="width: 320px; height: 320px; display: none;">-->
     <!--</div>-->
     <video  id="video" autoplay style="display: none">
-        <source src="images/IMG_3603.MOV">
+        <source src="images/IMG_0033.MOV">
     </video>
     <!--<canvas id="img"></canvas>-->
     <canvas id="canvas"></canvas>
     <!--<div id="my-live-photo-target-element" style="width: 320px; height: 320px;"></div>-->
-    <script src="three.r84.js"></script>
-    <script src="firstPersonControl.js"></script>
-    <script src="Photo.js"></script>
+    <script src="js/three.js"></script>
+    <!--<script src="js/firstPersonControl.js"></script>-->
+    <!--<script src="js/stats.min.js"></script>-->
+    <script src="js/Photo.js"></script>
 
     <script>
         let video, texture, camera, scene, renderer, canvas = document.getElementById('canvas'),
-                parameters, geometry, material, mesh, control;
+                parameters, geometry, material, mesh, controls;
         let width = window.innerWidth, height = window.innerHeight;
         let clock = new THREE.Clock(); //第一人称控制需要
 
         let counter = 0;
-
+        let showUp , meshes = [];
 
         let container = new THREE.Mesh(new THREE.Geometry(), new THREE.MeshLambertMaterial({transparent:true,opacity:0}))
         init();
@@ -50,10 +51,10 @@
 
             scene = new THREE.Scene();
 
-            camera = new THREE.PerspectiveCamera( 40, width / width, 1, 10000 );
+            camera = new THREE.PerspectiveCamera( 50, width / width, 1, 10000 );
             camera.position.z = 0;
             camera.position.y = 0;
-            camera.lookAt(new THREE.Vector3(0,-1000,-1000))
+            camera.lookAt(new THREE.Vector3(0,0,0))
 
             var light = new THREE.DirectionalLight( 0xffffff );
             light.position.set( 0.5, 1, 1 ).normalize();
@@ -64,83 +65,73 @@
             renderer = new THREE.WebGLRenderer( { canvas: canvas } );
             renderer.setClearColor(0x000000)
 
-            video = document.getElementById('video');
-
-            texture = new THREE.VideoTexture(video);
-            texture.minFilter = THREE.LinearFilter;
-            texture.magFilter = THREE.LinearFilter;
-//            texture.format = THREE.RGBFormat;
-            console.log(texture)
-
-//            video.play();
-            var texture2 = new THREE.TextureLoader().load( "images/IMG_3603.JPG" );
-//            texture2.wrapS = 512;
-//            texture2.wrapT = 512;
-            texture2.minFilter = THREE.LinearFilter;
-            texture2.magFilter = THREE.LinearFilter;
-            console.log(texture2)
-//            texture2.repeat.set(.8, .8);
-
-            parameters = { color: 0xffffff, map: texture2};
-            geometry = new THREE.BoxGeometry( 500, 200, 100 );new THREE.BoxGeometry()
-            material = new THREE.MeshLambertMaterial( parameters );
-//            material.saturation = 0 ;
-            mesh = new THREE.Mesh( geometry, material );
-//            material.map = texture
-
-            video.addEventListener('ended', function () {
-                material.map = texture2
+          for(let i =0;i<30;i++){
+            let cont = new THREE.Photo({
+              photoURL : 'images/IMG_0033.JPG',
+              videoURL : 'images/IMG_0033.MOV',
+              width:400 , height:300, depth:50, xGrid:10, yGrid:10
             })
-            container.add(mesh)
-
-//            scene.add(container);
-            cont = new THREE.Photo({
-                photoURL : 'images/IMG_3603.JPG',
-                videoURL : 'images/IMG_3603.MOV',
-                width:400 , height:300, depth:50, xGrid:10, yGrid:10
-            })
-            cont.position.z = -1000;
-            cont.position.y = -1000;
+            setRandomPosition(cont, 1000);
             cont.lookAt(camera.position)
+            meshes.push(cont)
             scene.add(cont)
+          }
 
-            control = new THREE.FirstPersonControls(camera, canvas);
-            control.movementSpeed = 100;
-            control.lookSpeed = 0.05;
-            control.lookVertical = true;
-//            control.lon = Math.PI/2;
-//            control.lat = Math.PI/2;
-            control.target = cont.position
+
+//            controls = new THREE.FirstPersonControls( camera )
+//            controls.lookSpeed = .1
+//            controls.lookVertical = true
+//            controls.lat =90
+//            controls.movementSpeed = 100
+//            controls.target = cont.position.clone()
+//            controls.target.set(0,-1000,-1000)
+//            controls.addEventListener( 'change', updateControls );
+//            stats = new Stats();
+//            document.body.appendChild( stats.dom );
 
             renderer.render(scene,camera)
 
-            window.requestAnimationFrame(loop);
+            loop()
         }
 
         function loop() {
-            var time = new Date();
-//            camera.lookAt(cont.position)
-//            control.update(clock.getDelta());
-            console.log(camera.position)
-            if(counter++ > 100){
-                material.map = texture
-                video.play()
-                counter = 0
-            }
-            if(!cont.hadInEnded){
+//            controls.update(clock.getDelta());
+            let smallCamera = camera.clone();
+            smallCamera.fov = 20;
+            smallCamera.updateProjectionMatrix();
+            for(let i =0;i<meshes.length;i++){
+              let cont = meshes[i];
+              showUp = cont.position.clone().project(smallCamera)
+              let shouldShow = (showUp.x < 1 && showUp.x > -1 && showUp.y < 1 && showUp.y > -1 && showUp.z < 1 && showUp.z > -1)
+
+              if(shouldShow ){
                 cont.show()
-            }
-            if(!cont.counter){
+              }
+              if(!cont.counter){
                 cont.play()
-            }
-            if(cont.hadInEnded){
+              }
+              if( !shouldShow ){
                 cont.hide()
+              }
             }
 
+//            stats.update();
             renderer.render(scene,camera)
             window.requestAnimationFrame(loop);
         }
+        function updateControls()
+        {
+          renderer.render(scene,camera)
+        }
 
+        function setRandomPosition(mesh, distance) {
+            let ang1 = Math.PI * Math.random() * 2,
+                ang2 = Math.PI * Math.random() * 2,
+                dist = Math.cos(ang1) * distance;
+            mesh.position.y = Math.sin(ang1) * distance;
+            mesh.position.x = Math.cos(ang2) * dist;
+            mesh.position.z = Math.sin(ang2) * dist;
+        }
     </script>
 </body>
 </html>
