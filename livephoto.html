@@ -2,53 +2,66 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0, shrink-to-fit=no">
+
     <title>Live Photo</title>
     <style>
-        *{margin: 0;overflow: hidden}
+        html, body {
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            color: #fff;
+            margin: 0px;
+            padding: 0;
+            overflow: hidden;
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+        }
+        #buttons {
+            position: fixed;
+            top: 0;
+            right: 0;
+            z-index: 1;
+            background: white;
+        }
     </style>
-
-    <script src="https://cdn.apple-livephotoskit.com/lpk/1/livephotoskit.js"></script>
 </head>
 <body>
-    <!--<div data-live-photo id="video"-->
-        <!--data-photo-src="images/IMG_3603.JPG"-->
-        <!--data-video-src="images/IMG_3603.MOV"-->
-        <!--style="width: 320px; height: 320px; display: none;">-->
-    <!--</div>-->
-    <video  id="video" autoplay style="display: none">
-        <source src="images/IMG_0033.MOV">
-    </video>
-    <!--<canvas id="img"></canvas>-->
-    <canvas id="canvas"></canvas>
-    <!--<div id="my-live-photo-target-element" style="width: 320px; height: 320px;"></div>-->
+    <canvas id="canvas" style="background-color: #123" width="500" height="500"></canvas>
+    <div id="buttons">
+        <button id="fullscreen">Fullscreen</button>
+        <button id="vr">VR (WebVR/Mobile only)</button>
+        <button id="reset">Reset</button>
+    </div>
     <script src="js/three.js"></script>
+    <script src="image.js"></script>
     <!--<script src="js/firstPersonControl.js"></script>-->
-    <!--<script src="js/stats.min.js"></script>-->
+    <script src="js/stats.min.js"></script>
     <script src="js/Photo.js"></script>
 
+    <script src="js/VRControls.js"></script>
+    <script src="js/VREffect.js"></script>
+    <script src="js/webvr-polyfill.js"></script>
+
     <script>
-        let video, texture, camera, scene, renderer, canvas = document.getElementById('canvas'),
+        var video, texture, camera, scene, renderer, canvas = document.getElementById('canvas'),
                 parameters, geometry, material, mesh, controls;
-        let width = window.innerWidth, height = window.innerHeight;
-        let clock = new THREE.Clock(); //第一人称控制需要
+        var width = window.innerWidth, height = window.innerHeight;
+        var clock = new THREE.Clock(); //第一人称控制需要
 
-        let counter = 0;
-        let showUp , meshes = [];
+        var counter = 0;
+        var showUp , meshes = [];
 
-        let container = new THREE.Mesh(new THREE.Geometry(), new THREE.MeshLambertMaterial({transparent:true,opacity:0}))
+        var vrDisplay = null,effect;
+
+        var container = new THREE.Mesh(new THREE.Geometry(), new THREE.MeshLambertMaterial({transparent:true,opacity:0}))
         init();
-//        const player = LivePhotosKit.Player(document.getElementById('my-live-photo-target-element'));
-//        player.photoSrc = 'images/IMG_3603.JPG';
-//        player.videoSrc = 'images/IMG_3603.MOV';
-//        player.addEventListener('photoload', function(evt){
-//            console.log('player ready', evt)
-//            init()
-//        });
 
         function init() {
             canvas.width = width;
             canvas.height = height;
-
             scene = new THREE.Scene();
 
             camera = new THREE.PerspectiveCamera( 50, width / width, 1, 10000 );
@@ -63,13 +76,90 @@
             scene.add( light );
 
             renderer = new THREE.WebGLRenderer( { canvas: canvas } );
+            renderer.setPixelRatio(Math.floor(window.devicePixelRatio));
             renderer.setClearColor(0x000000)
+            /*背景星星*/
+          var particles = 20000;  //星星数量
+            /*buffer做星星*/
+          var bufferGeometry = new THREE.BufferGeometry();
 
-          for(let i =0;i<30;i++){
-            let cont = new THREE.Photo({
-              photoURL : 'images/IMG_0033.JPG',
-              videoURL : 'images/IMG_0033.MOV',
-              width:400 , height:300, depth:50, xGrid:10, yGrid:10
+          var positions = new Float32Array( particles * 3 );
+          var colors = new Float32Array( particles * 3 );
+
+          var color = new THREE.Color();
+
+          var gap = 1000; // 定义星星的最近出现位置
+
+          for ( var i = 0; i < positions.length; i += 3 ) {
+
+            // positions
+
+              /*-2gap < x < 2gap */
+            var x = ( Math.random() * gap *2 )* (Math.random()<.5? -1 : 1);
+            var y = ( Math.random() * gap *2 )* (Math.random()<.5? -1 : 1);
+            var z = ( Math.random() * gap *2 )* (Math.random()<.5? -1 : 1);
+
+              /*找出x,y,z中绝对值最大的一个数*/
+            var biggest = Math.abs(x) > Math.abs(y) ? Math.abs(x) > Math.abs(z) ?　'x' : 'z' :
+              Math.abs(y) > Math.abs(z) ? 'y' : 'z';
+
+            var pos = { x, y, z};
+
+              /*如果最大值比n要小（因为要在一个距离之外才出现星星）则赋值为n（-n）*/
+            if(Math.abs(pos[biggest]) < gap) pos[biggest] = pos[biggest] < 0 ? -gap : gap;
+
+            x = pos['x'];
+            y = pos['y'];
+            z = pos['z'];
+
+            positions[ i ]     = x;
+            positions[ i + 1 ] = y;
+            positions[ i + 2 ] = z;
+
+            // colors
+
+              /*70%星星有颜色*/
+            var hasColor = Math.random() > 0.3;
+            var vx, vy, vz;
+
+            if(hasColor){
+              vx = (Math.random()+1) / 2 ;
+              vy = (Math.random()+1) / 2 ;
+              vz = (Math.random()+1) / 2 ;
+            }else{
+              vx = 1 ;
+              vy = 1 ;
+              vz = 1 ;
+            }
+
+              /*var vx = ( Math.abs(x) / n*2 ) ;
+               var vy = ( Math.abs(y) / n*2 ) ;
+               var vz = ( Math.abs(z) / n*2 ) ;*/
+
+            color.setRGB( vx, vy, vz );
+
+            colors[ i ]     = color.r;
+            colors[ i + 1 ] = color.g;
+            colors[ i + 2 ] = color.b;
+          }
+
+          bufferGeometry.addAttribute( 'position', new THREE.BufferAttribute( positions, 3 ) );
+          bufferGeometry.addAttribute( 'color', new THREE.BufferAttribute( colors, 3 ) );
+          bufferGeometry.computeBoundingSphere();
+
+            /*星星的material*/
+          var material = new THREE.PointsMaterial( { size: 6, vertexColors: THREE.VertexColors } );
+          var particleSystem = new THREE.Points( bufferGeometry, material );
+          scene.add( particleSystem );
+
+          var len = imageJsonFile.length;
+
+          for(var i =0;i<len;i++){
+            var acpect = imageJsonFile[i].width / imageJsonFile[i].height
+            var cont = new THREE.Photo({
+              photoURL : imageJsonFile[i].image,
+              videoURL : imageJsonFile[i].video,
+              width:300*acpect , height:300, depth:50, xGrid:10, yGrid:10
             })
             setRandomPosition(cont, 1000);
             cont.lookAt(camera.position)
@@ -81,28 +171,37 @@
 //            controls = new THREE.FirstPersonControls( camera )
 //            controls.lookSpeed = .1
 //            controls.lookVertical = true
-//            controls.lat =90
 //            controls.movementSpeed = 100
-//            controls.target = cont.position.clone()
-//            controls.target.set(0,-1000,-1000)
-//            controls.addEventListener( 'change', updateControls );
-//            stats = new Stats();
-//            document.body.appendChild( stats.dom );
 
-            renderer.render(scene,camera)
+          controls = new THREE.VRControls(camera);
+          effect = new THREE.VREffect(renderer);
+          effect.setSize(window.innerWidth, window.innerHeight);
 
-            loop()
+          navigator.getVRDisplays().then(function(displays) {
+            if (displays.length > 0) {
+              vrDisplay = displays[0];
+              // Kick off the render loop.
+              vrDisplay.requestAnimationFrame(loop);
+            }
+          });
+
+            stats = new Stats();
+            document.body.appendChild( stats.dom );
+
+            //renderer.render(scene,camera)
+
+//            loop()
         }
 
         function loop() {
-//            controls.update(clock.getDelta());
-            let smallCamera = camera.clone();
+            //controls.update(clock.getDelta());
+            var smallCamera = camera.clone();
             smallCamera.fov = 20;
             smallCamera.updateProjectionMatrix();
-            for(let i =0;i<meshes.length;i++){
-              let cont = meshes[i];
+            for(var i =0;i<meshes.length;i++){
+              var cont = meshes[i];
               showUp = cont.position.clone().project(smallCamera)
-              let shouldShow = (showUp.x < 1 && showUp.x > -1 && showUp.y < 1 && showUp.y > -1 && showUp.z < 1 && showUp.z > -1)
+              var shouldShow = (showUp.x < 1 && showUp.x > -1 && showUp.y < 1 && showUp.y > -1 && showUp.z < 1 && showUp.z > -1)
 
               if(shouldShow ){
                 cont.show()
@@ -115,9 +214,16 @@
               }
             }
 
-//            stats.update();
-            renderer.render(scene,camera)
-            window.requestAnimationFrame(loop);
+            stats.update();
+            //renderer.render(scene,camera)
+
+          controls.update();
+          // Render the scene.
+          effect.render(scene, camera);
+          // Keep looping.
+          vrDisplay.requestAnimationFrame(loop);
+
+//            window.requestAnimationFrame(loop);
         }
         function updateControls()
         {
@@ -125,12 +231,34 @@
         }
 
         function setRandomPosition(mesh, distance) {
-            let ang1 = Math.PI * Math.random() * 2,
+            var ang1 = Math.PI * Math.random() - Math.PI / 2,
                 ang2 = Math.PI * Math.random() * 2,
                 dist = Math.cos(ang1) * distance;
+
             mesh.position.y = Math.sin(ang1) * distance;
             mesh.position.x = Math.cos(ang2) * dist;
             mesh.position.z = Math.sin(ang2) * dist;
+        }
+
+        document.querySelector('button#fullscreen').addEventListener('click', function() {
+          enterFullscreen(renderer.domElement);
+        });
+        document.querySelector('button#vr').addEventListener('click', function() {
+          vrDisplay.requestPresent([{source: renderer.domElement}]);
+        });
+        document.querySelector('button#reset').addEventListener('click', function() {
+          vrDisplay.resetPose();
+        });
+        function enterFullscreen (el) {
+          if (el.requestFullscreen) {
+            el.requestFullscreen();
+          } else if (el.mozRequestFullScreen) {
+            el.mozRequestFullScreen();
+          } else if (el.webkitRequestFullscreen) {
+            el.webkitRequestFullscreen();
+          } else if (el.msRequestFullscreen) {
+            el.msRequestFullscreen();
+          }
         }
     </script>
 </body>

@@ -1,0 +1,23 @@
+{
+  "name": "photo-for-three.js",
+  "version": "1.0.0",
+  "description": "",
+  "main": "imageJsonfity.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WillBean/photo-for-three.js.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/WillBean/photo-for-three.js/issues"
+  },
+  "homepage": "https://github.com/WillBean/photo-for-three.js#readme",
+  "dependencies": {
+    "get-pixels": "^3.3.0",
+    "webpack": "^2.5.1"
+  }
+}
