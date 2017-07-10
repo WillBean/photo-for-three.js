@@ -1,5 +1,8 @@
 /**
  * Created by gzliweibin on 2017/5/15.
+ *
+ * 图片文件转js格式脚本
+ *
  */
 let fs = require('fs')
 let getPixels = require('get-pixels')
@@ -58,12 +61,14 @@ function getImage(i) {
 }
 
 function getImagePixels(path) {
+
   return new Promise((resolve, reject) => {
     getPixels(path, function (err, pixels) {
       if (err) {
         console.error(`loading ${path} got an error:\n${err}`);
         reject()
         return
+
       }
       resolve(pixels.shape.slice())
     })

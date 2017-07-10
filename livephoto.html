@@ -37,7 +37,6 @@
     </div>
     <script src="js/three.js"></script>
     <script src="image.js"></script>
-    <!--<script src="js/firstPersonControl.js"></script>-->
     <script src="js/stats.min.js"></script>
     <script src="js/Photo.js"></script>
 
@@ -49,14 +48,11 @@
         var video, texture, camera, scene, renderer, canvas = document.getElementById('canvas'),
                 parameters, geometry, material, mesh, controls;
         var width = window.innerWidth, height = window.innerHeight;
-        var clock = new THREE.Clock(); //第一人称控制需要
 
-        var counter = 0;
         var showUp , meshes = [];
 
         var vrDisplay = null,effect;
 
-        var container = new THREE.Mesh(new THREE.Geometry(), new THREE.MeshLambertMaterial({transparent:true,opacity:0}))
         init();
 
         function init() {
@@ -131,11 +127,6 @@
               vy = 1 ;
               vz = 1 ;
             }
-
-              /*var vx = ( Math.abs(x) / n*2 ) ;
-               var vy = ( Math.abs(y) / n*2 ) ;
-               var vz = ( Math.abs(z) / n*2 ) ;*/
-
             color.setRGB( vx, vy, vz );
 
             colors[ i ]     = color.r;
@@ -154,11 +145,11 @@
 
           var len = imageJsonFile.length;
 
-          for(var i =0;i<len;i++){
-            var acpect = imageJsonFile[i].width / imageJsonFile[i].height
+          for(var i =0;i<30;i++){
+            var acpect = imageJsonFile[0].width / imageJsonFile[0].height
             var cont = new THREE.Photo({
-              photoURL : imageJsonFile[i].image,
-              videoURL : imageJsonFile[i].video,
+              photoURL : imageJsonFile[0].image,
+              videoURL : imageJsonFile[0].video,
               width:300*acpect , height:300, depth:50, xGrid:10, yGrid:10
             })
             setRandomPosition(cont, 1000);
@@ -166,12 +157,6 @@
             meshes.push(cont)
             scene.add(cont)
           }
-
-
-//            controls = new THREE.FirstPersonControls( camera )
-//            controls.lookSpeed = .1
-//            controls.lookVertical = true
-//            controls.movementSpeed = 100
 
           controls = new THREE.VRControls(camera);
           effect = new THREE.VREffect(renderer);
@@ -188,13 +173,9 @@
             stats = new Stats();
             document.body.appendChild( stats.dom );
 
-            //renderer.render(scene,camera)
-
-//            loop()
         }
 
         function loop() {
-            //controls.update(clock.getDelta());
             var smallCamera = camera.clone();
             smallCamera.fov = 20;
             smallCamera.updateProjectionMatrix();
@@ -215,7 +196,6 @@
             }
 
             stats.update();
-            //renderer.render(scene,camera)
 
           controls.update();
           // Render the scene.
@@ -223,11 +203,6 @@
           // Keep looping.
           vrDisplay.requestAnimationFrame(loop);
 
-//            window.requestAnimationFrame(loop);
-        }
-        function updateControls()
-        {
-          renderer.render(scene,camera)
         }
 
         function setRandomPosition(mesh, distance) {

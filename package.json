@@ -18,6 +18,8 @@
   "homepage": "https://github.com/WillBean/photo-for-three.js#readme",
   "dependencies": {
     "get-pixels": "^3.3.0",
+    "koa": "^2.3.0",
+    "koa-static": "^4.0.1",
     "webpack": "^2.5.1"
   }
 }
